@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CommentBot — AI Auto Comment Generator</title>
+  <meta name="description" content="Generate natural AI-powered comments for WordPress articles instantly.">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --bg: #06060f;
+      --bg2: #0b0b1a;
+      --surface: #111127;
+      --card: #161636;
+      --card-hover: #1c1c42;
+      --border: #252555;
+      --border-glow: rgba(124, 58, 237, .35);
+      --accent: #7c3aed;
+      --accent2: #a78bfa;
+      --accent3: #c4b5fd;
+      --success: #10b981;
+      --success-bg: rgba(16, 185, 129, .08);
+      --error: #ef4444;
+      --error-bg: rgba(239, 68, 68, .08);
+      --warn: #f59e0b;
+      --text: #e8eaf0;
+      --text2: #c0c4d0;
+      --muted: #6b7094;
+      --radius: 16px;
+      --radius-sm: 10px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated BG ─────────────────────────────────────────────── */
+    .bg-glow {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    .bg-glow::before,
+    .bg-glow::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(120px);
+      opacity: .15;
+      animation: float 20s ease-in-out infinite;
+    }
+
+    .bg-glow::before {
+      width: 600px;
+      height: 600px;
+      background: var(--accent);
+      top: -200px;
+      right: -100px;
+    }
+
+    .bg-glow::after {
+      width: 500px;
+      height: 500px;
+      background: #6d28d9;
+      bottom: -200px;
+      left: -100px;
+      animation-delay: -10s;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) }
+      33% { transform: translate(30px, -30px) }
+      66% { transform: translate(-20px, 20px) }
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 32px 24px 60px;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding-top: 20px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .logo-icon {
+      width: 52px;
+      height: 52px;
+      background: linear-gradient(135deg, var(--accent), #9333ea, var(--accent2));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 8px 32px rgba(124, 58, 237, .3);
+      animation: icon-glow 3s ease-in-out infinite;
+    }
+
+    @keyframes icon-glow {
+      0%, 100% { box-shadow: 0 8px 32px rgba(124, 58, 237, .3) }
+      50% { box-shadow: 0 8px 48px rgba(124, 58, 237, .5) }
+    }
+
+    .logo-text {
+      text-align: left;
+    }
+
+    .logo-text h1 {
+      font-size: 22px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--text), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .logo-text span {
+      font-size: 13px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .header p {
+      font-size: 15px;
+      color: var(--muted);
+      max-width: 480px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+
+    /* ── Card ─────────────────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      margin-bottom: 24px;
+      transition: border-color .3s, box-shadow .3s;
+    }
+
+    .card:hover {
+      border-color: rgba(124, 58, 237, .2);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .url-count-badge {
+      background: rgba(124, 58, 237, .15);
+      color: var(--accent2);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* ── Textarea ─────────────────────────────────────────────────── */
+    .url-textarea {
+      width: 100%;
+      min-height: 200px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1.8;
+      resize: vertical;
+      outline: none;
+      transition: border-color .25s, box-shadow .25s;
+    }
+
+    .url-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, .12);
+    }
+
+    .url-textarea::placeholder {
+      color: var(--muted);
+      opacity: .6;
+    }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .25s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'Inter', sans-serif;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #6d28d9);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(124, 58, 237, .25);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(124, 58, 237, .4);
+    }
+
+    .btn-primary:active:not(:disabled) {
+      transform: translateY(0);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      background: var(--card);
+      color: var(--text);
+      border-color: var(--border-glow);
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* ── Progress ─────────────────────────────────────────────────── */
+    .progress-section {
+      display: none;
+      margin-bottom: 24px;
+    }
+
+    .progress-section.visible {
+      display: block;
+    }
+
+    .progress-card {
+      background: linear-gradient(135deg, rgba(124, 58, 237, .06), rgba(167, 139, 250, .03));
+      border: 1px solid rgba(124, 58, 237, .2);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+    }
+
+    .progress-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .progress-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-count {
+      font-size: 13px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-bar-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 3px;
+      transition: width .4s ease;
+      width: 0%;
+    }
+
+    .progress-status {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Spinner ──────────────────────────────────────────────────── */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, .2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      display: inline-block;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg) }
+    }
+
+    /* ── Results ──────────────────────────────────────────────────── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .results-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent2);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .result-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 22px 24px;
+      margin-bottom: 14px;
+      transition: all .25s;
+    }
+
+    .result-card:hover {
+      border-color: rgba(124, 58, 237, .25);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .2);
+    }
+
+    .result-card.success {
+      border-left: 3px solid var(--success);
+    }
+
+    .result-card.error {
+      border-left: 3px solid var(--error);
+    }
+
+    .result-index {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 8px;
+    }
+
+    .result-card.success .result-index {
+      color: var(--success);
+    }
+
+    .result-card.error .result-index {
+      color: var(--error);
+    }
+
+    .result-url {
+      display: block;
+      font-size: 12px;
+      color: var(--accent2);
+      text-decoration: none;
+      margin-bottom: 14px;
+      word-break: break-all;
+      line-height: 1.5;
+      transition: color .2s;
+    }
+
+    .result-url:hover {
+      color: var(--accent3);
+      text-decoration: underline;
+    }
+
+    .result-comment {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px 18px;
+      font-size: 14px;
+      line-height: 1.7;
+      color: var(--text2);
+      margin-bottom: 14px;
+      position: relative;
+    }
+
+    .result-comment::before {
+      content: '"';
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      font-size: 36px;
+      color: var(--accent);
+      opacity: .2;
+      font-family: Georgia, serif;
+      line-height: 1;
+    }
+
+    .result-comment p {
+      padding-left: 22px;
+    }
+
+    .result-error {
+      background: var(--error-bg);
+      border: 1px solid rgba(239, 68, 68, .2);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: #fca5a5;
+      margin-bottom: 14px;
+    }
+
+    .result-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .result-meta span {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-copy {
+      background: rgba(124, 58, 237, .1);
+      color: var(--accent2);
+      border: 1px solid rgba(124, 58, 237, .2);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: 'Inter', sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-copy:hover {
+      background: rgba(124, 58, 237, .2);
+      border-color: var(--accent);
+    }
+
+    .btn-copy.copied {
+      background: var(--success-bg);
+      color: var(--success);
+      border-color: rgba(16, 185, 129, .3);
+    }
+
+    /* ── Export bar ───────────────────────────────────────────────── */
+    .export-bar {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-export {
+      background: rgba(255, 255, 255, .04);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      font-family: 'Inter', sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .btn-export:hover {
+      background: var(--card);
+      color: var(--text);
+      border-color: var(--border-glow);
+    }
+
+    /* ── Empty state ─────────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+
+    .empty-state .icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: .5;
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Toast ────────────────────────────────────────────────────── */
+    .toasts {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .toast {
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn .3s ease;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
+      backdrop-filter: blur(12px);
+    }
+
+    .toast-success {
+      background: rgba(6, 78, 59, .9);
+      border: 1px solid var(--success);
+      color: #a7f3d0;
+    }
+
+    .toast-error {
+      background: rgba(127, 29, 29, .9);
+      border: 1px solid var(--error);
+      color: #fca5a5;
+    }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0 }
+      to { transform: translateX(0); opacity: 1 }
+    }
+
+    /* ── Scrollbar ────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 6px }
+    ::-webkit-scrollbar-track { background: transparent }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px }
+
+    /* ── Footer ───────────────────────────────────────────────────── */
+    .footer {
+      text-align: center;
+      padding: 32px 0 0;
+      font-size: 12px;
+      color: var(--muted);
+      opacity: .5;
+    }
+
+    /* ── Responsive ───────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .app { padding: 20px 16px 40px }
+      .card { padding: 20px }
+      .result-card { padding: 18px }
+      .actions { flex-direction: column }
+      .btn { width: 100%; justify-content: center }
+      .form-grid { grid-template-columns: 1fr }
+    }
+
+    /* ── Form ─────────────────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group.full {
+      grid-column: 1 / -1;
+    }
+
+    .form-group label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .form-group input {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color .25s, box-shadow .25s;
+    }
+
+    .form-group input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(124, 58, 237, .12);
+    }
+
+    .form-group input::placeholder {
+      color: var(--muted);
+      opacity: .5;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg-glow"></div>
+
+  <div class="app">
+
+    <!-- HEADER -->
+    <header class="header">
+      <div class="logo-badge">
+        <div class="logo-icon">🤖</div>
+        <div class="logo-text">
+          <h1>CommentBot</h1>
+          <span>AI-Powered Comment Generator</span>
+        </div>
+      </div>
+      <p>Masukkan URL artikel WordPress, lalu generate komentar AI yang natural dan relevan secara instan.</p>
+    </header>
+
+    <!-- COMMENTER IDENTITY -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">👤 Identitas Komentator</div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Nama</label>
+          <input type="text" id="inputName" value="Joenathan" placeholder="Nama komentator">
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="inputEmail" value="berita@esaunggul.ac.id" placeholder="email@example.com">
+        </div>
+        <div class="form-group full">
+          <label>Website</label>
+          <input type="url" id="inputWebsite" value="https://www.esaunggul.ac.id/" placeholder="https://example.com">
+        </div>
+      </div>
+    </div>
+
+    <!-- URL INPUT -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">🔗 URL Artikel</div>
+        <div class="url-count-badge" id="urlCount">0 URL</div>
+      </div>
+      <textarea class="url-textarea" id="urlTextarea"
+        placeholder="Masukkan URL satu per baris...&#10;https://example.com/artikel-1&#10;https://example.com/artikel-2&#10;https://example.com/artikel-3"></textarea>
+      <div class="actions">
+        <button class="btn btn-primary" id="btnGenerate" onclick="startGenerate()">
+          ✨ Generate Comments
+        </button>
+        <button class="btn btn-ghost" onclick="clearAll()">🗑 Kosongkan</button>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-section" id="progressSection">
+      <div class="progress-card">
+        <div class="progress-header">
+          <div class="progress-label">
+            <span class="spinner"></span>
+            Memproses...
+          </div>
+          <div class="progress-count" id="progressCount">0 / 0</div>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progressBar"></div>
+        </div>
+        <div class="progress-status" id="progressStatus">Menunggu...</div>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="resultsSection" style="display:none;">
+      <div class="results-header">
+        <div class="results-title">📝 Hasil Komentar</div>
+        <div class="export-bar">
+          <button class="btn-export" onclick="exportTxt()">📄 Export TXT</button>
+          <button class="btn-export" onclick="exportCsv()">📊 Export CSV</button>
+        </div>
+      </div>
+      <div id="resultsContainer"></div>
+    </div>
+
+    <!-- EMPTY STATE (initial) -->
+    <div id="emptyState" class="empty-state">
+      <div class="icon">💬</div>
+      <p>Masukkan URL di atas lalu tekan<br><strong>"Generate Comments"</strong> untuk memulai</p>
+    </div>
+
+    <div class="footer">CommentBot v2.0 — Powered by Grok AI</div>
+  </div>
+
+  <!-- TOASTS -->
+  <div class="toasts" id="toasts"></div>
+
+  <script>
+    // ── State ──────────────────────────────────────────────────────
+    let allResults = [];
+    let isProcessing = false;
+
+    // ── URL Count ─────────────────────────────────────────────────
+    const textarea = document.getElementById('urlTextarea');
+    textarea.addEventListener('input', updateUrlCount);
+
+    function updateUrlCount() {
+      const lines = textarea.value.split('\n').filter(l => l.trim());
+      document.getElementById('urlCount').textContent = `${lines.length} URL`;
+    }
+
+    // ── Generate ──────────────────────────────────────────────────
+    async function startGenerate() {
+      const raw = textarea.value.trim();
+      if (!raw) {
+        toast('Masukkan minimal 1 URL!', 'error');
+        return;
+      }
+
+      const urls = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (urls.length === 0) {
+        toast('Tidak ada URL valid!', 'error');
+        return;
+      }
+
+      if (urls.length > 20) {
+        toast('Maksimal 20 URL per request!', 'error');
+        return;
+      }
+
+      isProcessing = true;
+      allResults = [];
+
+      // UI state
+      document.getElementById('btnGenerate').disabled = true;
+      document.getElementById('btnGenerate').innerHTML = '<span class="spinner"></span> Memproses...';
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('resultsSection').style.display = 'none';
+
+      const progressSection = document.getElementById('progressSection');
+      progressSection.classList.add('visible');
+
+      // Process one-by-one for progress feedback
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i];
+        updateProgress(i, urls.length, url);
+
+        try {
+          const res = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              urls: [url],
+              name: document.getElementById('inputName').value,
+              email: document.getElementById('inputEmail').value,
+              website: document.getElementById('inputWebsite').value,
+            }),
+          });
+
+          const data = await res.json();
+
+          if (data.results && data.results.length > 0) {
+            allResults.push(data.results[0]);
+          } else {
+            allResults.push({
+              url,
+              status: 'error',
+              comment: '',
+              error: data.error || 'Unknown error',
+              commenter: {},
+            });
+          }
+        } catch (err) {
+          allResults.push({
+            url,
+            status: 'error',
+            comment: '',
+            error: err.message,
+            commenter: {},
+          });
+        }
+
+        renderResults();
+      }
+
+      // Done
+      updateProgress(urls.length, urls.length, 'Selesai!');
+      isProcessing = false;
+      document.getElementById('btnGenerate').disabled = false;
+      document.getElementById('btnGenerate').innerHTML = '✨ Generate Comments';
+      setTimeout(() => progressSection.classList.remove('visible'), 1500);
+
+      const successCount = allResults.filter(r => r.status === 'success').length;
+      toast(`Selesai! ${successCount}/${allResults.length} komentar berhasil di-generate`, 'success');
+    }
+
+    // ── Progress ──────────────────────────────────────────────────
+    function updateProgress(current, total, statusMsg) {
+      const pct = total > 0 ? Math.round((current / total) * 100) : 0;
+      document.getElementById('progressBar').style.width = pct + '%';
+      document.getElementById('progressCount').textContent = `${current} / ${total}`;
+      document.getElementById('progressStatus').textContent = statusMsg;
+    }
+
+    // ── Render Results ────────────────────────────────────────────
+    function renderResults() {
+      const container = document.getElementById('resultsContainer');
+      document.getElementById('resultsSection').style.display = 'block';
+
+      container.innerHTML = allResults.map((r, i) => {
+        if (r.status === 'success') {
+          const displayUrl = r.commentUrl || r.url;
+          return `
+            <div class="result-card success">
+              <div class="result-index">✅ Komentar #${i + 1}</div>
+              <a class="result-url" href="${escHtml(displayUrl)}" target="_blank">🔗 ${escHtml(displayUrl)}</a>
+              <div class="result-comment">
+                <p>${escHtml(r.comment)}</p>
+              </div>
+              <div class="result-meta">
+                <span>👤 ${escHtml(r.commenter?.name || '-')}</span>
+                <span>📧 ${escHtml(r.commenter?.email || '-')}</span>
+                <span>📅 ${escHtml(r.date || '-')}</span>
+                <button class="btn-copy" onclick="copyComment(this, ${i})">📋 Copy</button>
+              </div>
+            </div>`;
+        } else {
+          return `
+            <div class="result-card error">
+              <div class="result-index">❌ Gagal #${i + 1}</div>
+              <a class="result-url" href="${escHtml(r.url)}" target="_blank">${escHtml(r.url)}</a>
+              <div class="result-error">${escHtml(r.error || 'Unknown error')}</div>
+            </div>`;
+        }
+      }).join('');
+    }
+
+    // ── Copy ──────────────────────────────────────────────────────
+    function copyComment(btn, index) {
+      const comment = allResults[index]?.comment;
+      if (!comment) return;
+      navigator.clipboard.writeText(comment).then(() => {
+        btn.classList.add('copied');
+        btn.innerHTML = '✅ Copied!';
+        setTimeout(() => {
+          btn.classList.remove('copied');
+          btn.innerHTML = '📋 Copy';
+        }, 2000);
+      });
+    }
+
+    // ── Export TXT ────────────────────────────────────────────────
+    function exportTxt() {
+      if (allResults.length === 0) { toast('Belum ada hasil!', 'error'); return; }
+      const lines = allResults.map((r, i) => {
+        if (r.status === 'success') {
+          return `#${i + 1}\nURL: ${r.url}\nLink Komentar: ${r.commentUrl || r.url}\nKomentar: ${r.comment}\nNama: ${r.commenter?.name || '-'}\nEmail: ${r.commenter?.email || '-'}\nTanggal: ${r.date || '-'}\n`;
+        } else {
+          return `#${i + 1}\nURL: ${r.url}\nStatus: GAGAL\nError: ${r.error}\n`;
+        }
+      });
+      downloadFile('hasil_komentar.txt', lines.join('\n---\n\n'));
+      toast('File TXT berhasil diunduh!', 'success');
+    }
+
+    // ── Export CSV ────────────────────────────────────────────────
+    function exportCsv() {
+      if (allResults.length === 0) { toast('Belum ada hasil!', 'error'); return; }
+      const header = 'No,URL,Link Komentar,Status,Komentar,Nama,Email,Tanggal\n';
+      const rows = allResults.map((r, i) => {
+        const comment = (r.comment || '').replace(/"/g, '""');
+        return `${i + 1},"${r.url}","${r.commentUrl || ''}","${r.status}","${comment}","${r.commenter?.name || ''}","${r.commenter?.email || ''}","${r.date || ''}"`;
+      });
+      downloadFile('hasil_komentar.csv', header + rows.join('\n'));
+      toast('File CSV berhasil diunduh!', 'success');
+    }
+
+    function downloadFile(filename, content) {
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    // ── Clear ─────────────────────────────────────────────────────
+    function clearAll() {
+      textarea.value = '';
+      updateUrlCount();
+      allResults = [];
+      document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('emptyState').style.display = 'block';
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function toast(msg, type = 'success') {
+      const c = document.getElementById('toasts');
+      const el = document.createElement('div');
+      el.className = `toast toast-${type}`;
+      el.innerHTML = `${type === 'success' ? '✅' : '❌'} ${msg}`;
+      c.appendChild(el);
+      setTimeout(() => el.remove(), 3500);
+    }
+
+    function escHtml(s) {
+      if (!s) return '';
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+output/
+browsers/
+.env
+settings.json
+urls.txt
+*.exe
+*.blockmap
+.vercel
+dev-server.js

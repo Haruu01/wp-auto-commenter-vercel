@@ -1,0 +1,16 @@
+{
+  "name": "wp-auto-commenter",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "WP Auto Commenter — Generate AI comments for WordPress articles",
+  "scripts": {
+    "dev": "node dev-server.js",
+    "vercel-dev": "npx vercel dev"
+  },
+  "dependencies": {
+    "node-html-parser": "^6.1.13"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
