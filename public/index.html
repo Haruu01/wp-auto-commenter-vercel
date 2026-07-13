@@ -785,6 +785,37 @@
       document.getElementById('urlCount').textContent = `${lines.length} URL`;
     }
 
+    // ── Delay Config ─────────────────────────────────────────────
+    const DELAY_MIN_SEC = 30;
+    const DELAY_MAX_SEC = 60;
+
+    function getRandomDelay() {
+      return Math.floor(Math.random() * (DELAY_MAX_SEC - DELAY_MIN_SEC + 1)) + DELAY_MIN_SEC;
+    }
+
+    function waitWithCountdown(seconds) {
+      return new Promise(resolve => {
+        let remaining = seconds;
+        const statusEl = document.getElementById('progressStatus');
+        const progressLabel = document.querySelector('.progress-label');
+
+        // Show countdown in the progress label
+        progressLabel.innerHTML = '⏳ Menunggu jeda...';
+
+        const tick = () => {
+          if (remaining <= 0) {
+            progressLabel.innerHTML = '<span class="spinner"></span> Memproses...';
+            resolve();
+            return;
+          }
+          statusEl.textContent = `⏳ Jeda ${remaining} detik sebelum komentar berikutnya...`;
+          remaining--;
+          setTimeout(tick, 1000);
+        };
+        tick();
+      });
+    }
+
     // ── Generate ──────────────────────────────────────────────────
     async function startGenerate() {
       const raw = textarea.value.trim();
@@ -819,7 +850,14 @@
       // Process one-by-one for progress feedback
       for (let i = 0; i < urls.length; i++) {
         const url = urls[i];
-        updateProgress(i, urls.length, url);
+
+        // Add delay between comments (not before the first one)
+        if (i > 0) {
+          const delaySec = getRandomDelay();
+          await waitWithCountdown(delaySec);
+        }
+
+        updateProgress(i, urls.length, `Memproses: ${url}`);
 
         try {
           const res = await fetch('/api/generate', {

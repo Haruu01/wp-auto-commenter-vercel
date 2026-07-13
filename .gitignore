@@ -9,3 +9,4 @@ urls.txt
 *.blockmap
 .vercel
 dev-server.js
+mcp_*.json

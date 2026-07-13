@@ -6,6 +6,15 @@ const DEFAULT_NAME = 'Joenathan';
 const DEFAULT_EMAIL = 'berita@esaunggul.ac.id';
 const DEFAULT_WEBSITE = 'https://www.esaunggul.ac.id/';
 
+// ── Delay Config (in seconds) ───────────────────────────────────────────────
+const DELAY_MIN_SEC = 30; // Minimum delay between comments
+const DELAY_MAX_SEC = 60; // Maximum delay between comments
+
+function randomDelay() {
+  const ms = (Math.floor(Math.random() * (DELAY_MAX_SEC - DELAY_MIN_SEC + 1)) + DELAY_MIN_SEC) * 1000;
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 // ── Fetch Page HTML ─────────────────────────────────────────────────────────
 async function fetchPageHtml(url) {
   let res;
@@ -270,6 +279,11 @@ export default async function handler(req, res) {
   for (let i = 0; i < urls.length; i++) {
     const url = urls[i].trim();
     if (!url) continue;
+
+    // Add delay between comments (not before the first one)
+    if (i > 0) {
+      await randomDelay();
+    }
 
     try {
       // 1. Fetch the page HTML
