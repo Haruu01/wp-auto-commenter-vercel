@@ -6,788 +6,368 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CommentBot — AI Auto Comment Generator</title>
   <meta name="description" content="Generate natural AI-powered comments for WordPress articles instantly.">
+
+  <!-- Fonts -->
   <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
     rel="stylesheet">
+
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont/tabler-icons.min.css">
+
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            mauve: '#DF73FF',
+            aqua: '#00CCFF',
+            space: '#0B0B1A',
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box
-    }
-
-    :root {
-      --bg: #06060f;
-      --bg2: #0b0b1a;
-      --surface: #111127;
-      --card: #161636;
-      --card-hover: #1c1c42;
-      --border: #252555;
-      --border-glow: rgba(124, 58, 237, .35);
-      --accent: #7c3aed;
-      --accent2: #a78bfa;
-      --accent3: #c4b5fd;
-      --success: #10b981;
-      --success-bg: rgba(16, 185, 129, .08);
-      --error: #ef4444;
-      --error-bg: rgba(239, 68, 68, .08);
-      --warn: #f59e0b;
-      --text: #e8eaf0;
-      --text2: #c0c4d0;
-      --muted: #6b7094;
-      --radius: 16px;
-      --radius-sm: 10px;
-    }
-
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* ── Animated BG ─────────────────────────────────────────────── */
-    .bg-glow {
+    /* ── Aurora Background ─────────────────────────────────────────── */
+    .aurora-mesh {
       position: fixed;
-      inset: 0;
-      pointer-events: none;
+      inset: -50%;
+      width: 200%;
+      height: 200%;
+      background:
+        radial-gradient(circle at 30% 20%, #DF73FF 0%, transparent 30%),
+        radial-gradient(circle at 70% 80%, #00CCFF 0%, transparent 30%),
+        radial-gradient(circle at 50% 50%, #1C1C42 0%, #0B0B1A 100%);
+      filter: blur(100px);
       z-index: 0;
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    /* ── Glassmorphism Primitives ─────────────────────────────────── */
+    .glass-panel {
+      background: linear-gradient(135deg, rgba(28, 28, 66, 0.6), rgba(28, 28, 66, 0.3));
+      backdrop-filter: blur(40px);
+      -webkit-backdrop-filter: blur(40px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.3s ease;
+      position: relative;
       overflow: hidden;
     }
 
-    .bg-glow::before,
-    .bg-glow::after {
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 40px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .glass-highlight::before {
       content: '';
       position: absolute;
-      border-radius: 50%;
-      filter: blur(120px);
-      opacity: .15;
-      animation: float 20s ease-in-out infinite;
-    }
-
-    .bg-glow::before {
-      width: 600px;
-      height: 600px;
-      background: var(--accent);
-      top: -200px;
-      right: -100px;
-    }
-
-    .bg-glow::after {
-      width: 500px;
-      height: 500px;
-      background: #6d28d9;
-      bottom: -200px;
-      left: -100px;
-      animation-delay: -10s;
-    }
-
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) }
-      33% { transform: translate(30px, -30px) }
-      66% { transform: translate(-20px, 20px) }
-    }
-
-    /* ── Layout ──────────────────────────────────────────────────── */
-    .app {
-      position: relative;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
       z-index: 1;
-      max-width: 900px;
-      margin: 0 auto;
-      padding: 32px 24px 60px;
     }
 
-    /* ── Header ──────────────────────────────────────────────────── */
-    .header {
-      text-align: center;
-      margin-bottom: 40px;
-      padding-top: 20px;
-    }
-
-    .logo-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 20px;
-    }
-
-    .logo-icon {
-      width: 52px;
-      height: 52px;
-      background: linear-gradient(135deg, var(--accent), #9333ea, var(--accent2));
+    .input-glass {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 26px;
-      box-shadow: 0 8px 32px rgba(124, 58, 237, .3);
-      animation: icon-glow 3s ease-in-out infinite;
+      padding: 14px 18px;
+      color: white;
+      transition: all 0.3s;
     }
 
-    @keyframes icon-glow {
-      0%, 100% { box-shadow: 0 8px 32px rgba(124, 58, 237, .3) }
-      50% { box-shadow: 0 8px 48px rgba(124, 58, 237, .5) }
-    }
-
-    .logo-text {
-      text-align: left;
-    }
-
-    .logo-text h1 {
-      font-size: 22px;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--text), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .logo-text span {
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 400;
-    }
-
-    .header p {
-      font-size: 15px;
-      color: var(--muted);
-      max-width: 480px;
-      margin: 0 auto;
-      line-height: 1.7;
-    }
-
-    /* ── Card ─────────────────────────────────────────────────────── */
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 28px;
-      margin-bottom: 24px;
-      transition: border-color .3s, box-shadow .3s;
-    }
-
-    .card:hover {
-      border-color: rgba(124, 58, 237, .2);
-    }
-
-    .card-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
-    }
-
-    .card-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--accent2);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .url-count-badge {
-      background: rgba(124, 58, 237, .15);
-      color: var(--accent2);
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    /* ── Textarea ─────────────────────────────────────────────────── */
-    .url-textarea {
-      width: 100%;
-      min-height: 200px;
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 16px 18px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: 'JetBrains Mono', monospace;
-      line-height: 1.8;
-      resize: vertical;
+    .input-glass:focus {
+      border-color: #DF73FF;
       outline: none;
-      transition: border-color .25s, box-shadow .25s;
+      background: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 0 0 4px rgba(223, 115, 255, 0.1);
     }
 
-    .url-textarea:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(124, 58, 237, .12);
-    }
-
-    .url-textarea::placeholder {
-      color: var(--muted);
-      opacity: .6;
-    }
-
-    /* ── Buttons ──────────────────────────────────────────────────── */
-    .actions {
-      display: flex;
-      gap: 12px;
-      margin-top: 18px;
-    }
-
-    .btn {
-      padding: 12px 24px;
-      border-radius: var(--radius-sm);
-      border: none;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .25s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-family: 'Inter', sans-serif;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #6d28d9);
-      color: #fff;
-      box-shadow: 0 4px 16px rgba(124, 58, 237, .25);
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 28px rgba(124, 58, 237, .4);
-    }
-
-    .btn-primary:active:not(:disabled) {
-      transform: translateY(0);
-    }
-
-    .btn-ghost {
-      background: transparent;
-      color: var(--muted);
-      border: 1px solid var(--border);
-    }
-
-    .btn-ghost:hover {
-      background: var(--card);
-      color: var(--text);
-      border-color: var(--border-glow);
-    }
-
-    .btn:disabled {
-      opacity: .5;
-      cursor: not-allowed;
-      transform: none !important;
-    }
-
-    /* ── Progress ─────────────────────────────────────────────────── */
-    .progress-section {
-      display: none;
-      margin-bottom: 24px;
-    }
-
-    .progress-section.visible {
-      display: block;
-    }
-
-    .progress-card {
-      background: linear-gradient(135deg, rgba(124, 58, 237, .06), rgba(167, 139, 250, .03));
-      border: 1px solid rgba(124, 58, 237, .2);
-      border-radius: var(--radius);
-      padding: 24px 28px;
-    }
-
-    .progress-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-    }
-
-    .progress-label {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--accent2);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .progress-count {
-      font-size: 13px;
-      color: var(--muted);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .progress-bar-track {
-      height: 6px;
-      background: var(--border);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border-radius: 3px;
-      transition: width .4s ease;
-      width: 0%;
-    }
-
-    .progress-status {
-      margin-top: 10px;
-      font-size: 12px;
-      color: var(--muted);
-      font-family: 'JetBrains Mono', monospace;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* ── Spinner ──────────────────────────────────────────────────── */
+    /* ── Loaders ─────────────────────────────────────────────────── */
     .spinner {
       width: 18px;
       height: 18px;
       border: 2px solid rgba(255, 255, 255, .2);
-      border-top-color: #fff;
+      border-top-color: #DF73FF;
       border-radius: 50%;
       animation: spin .7s linear infinite;
       display: inline-block;
     }
 
     @keyframes spin {
-      to { transform: rotate(360deg) }
+      to {
+        transform: rotate(360deg)
+      }
     }
 
-    /* ── Results ──────────────────────────────────────────────────── */
-    .results-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 18px;
+    /* ── Custom Utilities ─────────────────────────────────────────── */
+    .masonry-grid {
+      columns: 1;
+      gap: 1.5rem;
     }
 
-    .results-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--accent2);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    @media (min-width: 768px) {
+      .masonry-grid {
+        columns: 2;
+      }
     }
 
-    .result-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 22px 24px;
-      margin-bottom: 14px;
-      transition: all .25s;
+    @media (min-width: 1024px) {
+      .masonry-grid {
+        columns: 3;
+      }
     }
 
-    .result-card:hover {
-      border-color: rgba(124, 58, 237, .25);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, .2);
-    }
-
-    .result-card.success {
-      border-left: 3px solid var(--success);
-    }
-
-    .result-card.error {
-      border-left: 3px solid var(--error);
-    }
-
-    .result-index {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      margin-bottom: 8px;
-    }
-
-    .result-card.success .result-index {
-      color: var(--success);
-    }
-
-    .result-card.error .result-index {
-      color: var(--error);
-    }
-
-    .result-url {
-      display: block;
-      font-size: 12px;
-      color: var(--accent2);
-      text-decoration: none;
-      margin-bottom: 14px;
-      word-break: break-all;
-      line-height: 1.5;
-      transition: color .2s;
-    }
-
-    .result-url:hover {
-      color: var(--accent3);
-      text-decoration: underline;
-    }
-
-    .result-comment {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      padding: 16px 18px;
-      font-size: 14px;
-      line-height: 1.7;
-      color: var(--text2);
-      margin-bottom: 14px;
-      position: relative;
-    }
-
-    .result-comment::before {
-      content: '"';
-      position: absolute;
-      top: 8px;
-      left: 12px;
-      font-size: 36px;
-      color: var(--accent);
-      opacity: .2;
-      font-family: Georgia, serif;
-      line-height: 1;
-    }
-
-    .result-comment p {
-      padding-left: 22px;
-    }
-
-    .result-error {
-      background: var(--error-bg);
-      border: 1px solid rgba(239, 68, 68, .2);
-      border-radius: var(--radius-sm);
-      padding: 12px 16px;
-      font-size: 13px;
-      color: #fca5a5;
-      margin-bottom: 14px;
-    }
-
-    .result-meta {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-
-    .result-meta span {
-      font-size: 11px;
-      color: var(--muted);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .btn-copy {
-      background: rgba(124, 58, 237, .1);
-      color: var(--accent2);
-      border: 1px solid rgba(124, 58, 237, .2);
-      padding: 6px 14px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .2s;
-      font-family: 'Inter', sans-serif;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .btn-copy:hover {
-      background: rgba(124, 58, 237, .2);
-      border-color: var(--accent);
-    }
-
-    .btn-copy.copied {
-      background: var(--success-bg);
-      color: var(--success);
-      border-color: rgba(16, 185, 129, .3);
-    }
-
-    /* ── Export bar ───────────────────────────────────────────────── */
-    .export-bar {
-      display: flex;
-      gap: 10px;
-    }
-
-    .btn-export {
-      background: rgba(255, 255, 255, .04);
-      color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 7px 14px;
-      border-radius: 8px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .2s;
-      font-family: 'Inter', sans-serif;
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .btn-export:hover {
-      background: var(--card);
-      color: var(--text);
-      border-color: var(--border-glow);
-    }
-
-    /* ── Empty state ─────────────────────────────────────────────── */
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--muted);
-    }
-
-    .empty-state .icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-      opacity: .5;
-    }
-
-    .empty-state p {
-      font-size: 14px;
-      line-height: 1.6;
-    }
-
-    /* ── Toast ────────────────────────────────────────────────────── */
-    .toasts {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 2000;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .toast {
-      padding: 12px 18px;
-      border-radius: var(--radius-sm);
-      font-size: 13px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      animation: slideIn .3s ease;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, .5);
-      backdrop-filter: blur(12px);
-    }
-
-    .toast-success {
-      background: rgba(6, 78, 59, .9);
-      border: 1px solid var(--success);
-      color: #a7f3d0;
-    }
-
-    .toast-error {
-      background: rgba(127, 29, 29, .9);
-      border: 1px solid var(--error);
-      color: #fca5a5;
-    }
-
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0 }
-      to { transform: translateX(0); opacity: 1 }
+    .break-inside-avoid {
+      break-inside: avoid;
     }
 
     /* ── Scrollbar ────────────────────────────────────────────────── */
-    ::-webkit-scrollbar { width: 6px }
-    ::-webkit-scrollbar-track { background: transparent }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px }
-
-    /* ── Footer ───────────────────────────────────────────────────── */
-    .footer {
-      text-align: center;
-      padding: 32px 0 0;
-      font-size: 12px;
-      color: var(--muted);
-      opacity: .5;
+    ::-webkit-scrollbar {
+      width: 6px
     }
 
-    /* ── Responsive ───────────────────────────────────────────────── */
-    @media (max-width: 640px) {
-      .app { padding: 20px 16px 40px }
-      .card { padding: 20px }
-      .result-card { padding: 18px }
-      .actions { flex-direction: column }
-      .btn { width: 100%; justify-content: center }
-      .form-grid { grid-template-columns: 1fr }
+    ::-webkit-scrollbar-track {
+      background: transparent
     }
 
-    /* ── Form ─────────────────────────────────────────────────────── */
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px
     }
 
-    .form-group {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .form-group.full {
-      grid-column: 1 / -1;
-    }
-
-    .form-group label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-    }
-
-    .form-group input {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: var(--text);
-      font-size: 13px;
-      font-family: 'Inter', sans-serif;
-      outline: none;
-      transition: border-color .25s, box-shadow .25s;
-    }
-
-    .form-group input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(124, 58, 237, .12);
-    }
-
-    .form-group input::placeholder {
-      color: var(--muted);
-      opacity: .5;
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.2)
     }
   </style>
 </head>
 
-<body>
-  <div class="bg-glow"></div>
+<body class="bg-space text-white min-h-screen overflow-x-hidden font-sans">
+  <div class="aurora-mesh"></div>
 
-  <div class="app">
+  <div class="relative z-10 max-w-6xl mx-auto px-6 py-16 flex flex-col items-center">
 
     <!-- HEADER -->
-    <header class="header">
-      <div class="logo-badge">
-        <div class="logo-icon">🤖</div>
-        <div class="logo-text">
-          <h1>CommentBot</h1>
-          <span>AI-Powered Comment Generator</span>
+    <header class="text-center mb-16 max-w-3xl mx-auto">
+      <div class="inline-flex items-center gap-5 mb-6 px-8 py-3 rounded-full glass-card border-white/10">
+        <span class="text-4xl">🤖</span>
+        <div class="text-left border-l border-white/10 pl-5">
+          <h1
+            class="font-heading text-2xl font-extrabold tracking-tight bg-gradient-to-r from-white to-white/40 bg-clip-text text-transparent">
+            CommentBot</h1>
+          <p class="text-[10px] font-bold text-mauve uppercase tracking-[0.3em] mt-0.5">AI-Powered Engagement Engine</p>
         </div>
       </div>
-      <p>Masukkan URL artikel WordPress, lalu generate komentar AI yang natural dan relevan secara instan.</p>
+      <p class="text-white/40 text-lg leading-relaxed font-medium">
+        Masukkan URL artikel WordPress, lalu generate komentar AI yang natural dan relevan secara instan.
+      </p>
     </header>
 
-    <!-- COMMENTER IDENTITY -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">👤 Identitas Komentator</div>
-      </div>
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Nama</label>
-          <input type="text" id="inputName" value="Joenathan" placeholder="Nama komentator">
-        </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="inputEmail" value="berita@esaunggul.ac.id" placeholder="email@example.com">
-        </div>
-        <div class="form-group full">
-          <label>Website</label>
-          <input type="url" id="inputWebsite" value="https://www.esaunggul.ac.id/" placeholder="https://example.com">
-        </div>
-      </div>
-    </div>
+    <!-- MAIN APP ISLAND -->
+    <div class="glass-panel w-full rounded-[40px] overflow-hidden flex flex-col shadow-2xl">
 
-    <!-- URL INPUT -->
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">🔗 URL Artikel</div>
-        <div class="url-count-badge" id="urlCount">0 URL</div>
-      </div>
-      <textarea class="url-textarea" id="urlTextarea"
-        placeholder="Masukkan URL satu per baris...&#10;https://example.com/artikel-1&#10;https://example.com/artikel-2&#10;https://example.com/artikel-3"></textarea>
-      <div class="actions">
-        <button class="btn btn-primary" id="btnGenerate" onclick="startGenerate()">
-          ✨ Generate Comments
-        </button>
-        <button class="btn btn-ghost" onclick="clearAll()">🗑 Kosongkan</button>
-      </div>
-    </div>
+      <!-- SETUP SECTION -->
+      <section class="p-10 lg:p-14 border-b border-white/5 bg-gradient-to-br from-white/[0.02] to-transparent">
+        <div class="flex flex-col lg:flex-row gap-16">
 
-    <!-- PROGRESS -->
-    <div class="progress-section" id="progressSection">
-      <div class="progress-card">
-        <div class="progress-header">
-          <div class="progress-label">
-            <span class="spinner"></span>
-            Memproses...
+          <!-- Navigation & Progress -->
+          <div class="lg:w-1/3 flex flex-col justify-between">
+            <div>
+              <h2 class="font-heading text-4xl font-extrabold mb-3 tracking-tight">Setup</h2>
+              <p class="text-white/30 text-base mb-12 font-medium">Konfigurasi identitas dan target artikel Anda.</p>
+
+              <div class="space-y-10">
+                <div class="flex items-center gap-6">
+                  <div
+                    class="w-12 h-12 rounded-[22px] bg-gradient-to-br from-mauve to-aqua p-0.5 flex items-center justify-center shadow-xl shadow-mauve/20">
+                    <div
+                      class="w-full h-full rounded-[calc(22px-0.5px)] bg-space flex items-center justify-center text-white font-bold text-lg">
+                      1</div>
+                  </div>
+                  <div>
+                    <p class="text-sm font-bold text-white tracking-tight">Identitas & Targets</p>
+                    <p class="text-[10px] font-bold text-mauve uppercase tracking-[0.2em] mt-0.5">Sedang Aktif</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-6 opacity-30">
+                  <div
+                    class="w-12 h-12 rounded-[22px] border border-white/20 flex items-center justify-center font-bold text-lg bg-white/5 text-white/40">
+                    2</div>
+                  <div>
+                    <p class="text-sm font-bold text-white/60 tracking-tight">Log Generasi</p>
+                    <p class="text-[10px] font-bold uppercase tracking-[0.2em] mt-0.5 text-white/40">Antrean</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Progress Card -->
+            <div id="progressSection"
+              class="mt-16 bg-white/[0.03] p-8 rounded-[32px] border border-white/5 hidden shadow-inner">
+              <div class="flex justify-between items-end mb-4">
+                <span id="progressStatus"
+                  class="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] truncate max-w-[160px]">Menyiapkan
+                  Mesin</span>
+                <span id="progressCount" class="text-xs font-bold text-aqua drop-shadow-[0_0_8px_rgba(0,204,255,0.4)]">0
+                  / 0</span>
+              </div>
+              <div class="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
+                <div id="progressBar"
+                  class="h-full w-0 bg-gradient-to-r from-mauve to-aqua shadow-[0_0_15px_rgba(223,115,255,0.6)] transition-all duration-500 ease-out">
+                </div>
+              </div>
+            </div>
           </div>
-          <div class="progress-count" id="progressCount">0 / 0</div>
+
+          <!-- Form Fields -->
+          <div class="lg:w-2/3 space-y-10">
+            <!-- Identity Inputs -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-3">
+                <label class="text-[10px] font-bold text-white/40 uppercase tracking-widest ml-1">Komentator
+                  Nama</label>
+                <input type="text" id="inputName" class="w-full input-glass text-base font-medium" value="Joenathan"
+                  placeholder="Nama komentator">
+              </div>
+              <div class="space-y-3">
+                <label class="text-[10px] font-bold text-white/40 uppercase tracking-widest ml-1">Email Address</label>
+                <input type="email" id="inputEmail" class="w-full input-glass text-base font-medium"
+                  value="berita@esaunggul.ac.id" placeholder="email@example.com">
+              </div>
+              <div class="md:col-span-2 space-y-3">
+                <label class="text-[10px] font-bold text-white/40 uppercase tracking-widest ml-1">Target Website</label>
+                <input type="url" id="inputWebsite" class="w-full input-glass text-base font-medium"
+                  value="https://www.esaunggul.ac.id/" placeholder="https://example.com">
+              </div>
+            </div>
+
+            <!-- URL Input -->
+            <div class="space-y-4">
+              <div class="flex justify-between items-center px-1">
+                <label class="text-[10px] font-bold text-white/40 uppercase tracking-widest">WordPress Target
+                  URLs</label>
+                <span id="urlCount"
+                  class="text-[10px] font-bold text-aqua bg-aqua/10 border border-aqua/20 px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(0,204,255,0.1)]">0
+                  URL Detected</span>
+              </div>
+              <textarea id="urlTextarea"
+                class="w-full input-glass min-h-[180px] resize-none font-mono text-sm leading-relaxed"
+                placeholder="Masukkan URL satu per baris...&#10;https://example.com/artikel-1&#10;https://example.com/artikel-2"></textarea>
+            </div>
+
+            <!-- Actions -->
+            <div class="flex items-center justify-end pt-6">
+              <button id="btnGenerate"
+                class="group relative px-10 py-4 rounded-[22px] bg-gradient-to-r from-mauve to-aqua text-black font-extrabold text-base hover:scale-[1.03] active:scale-95 transition-all shadow-xl shadow-mauve/30 flex items-center gap-3"
+                onclick="startGenerate()">
+                <i class="ti ti-sparkles text-xl"></i> Generate Comments
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="progress-bar-track">
-          <div class="progress-bar-fill" id="progressBar"></div>
+      </section>
+
+      <!-- RESULTS SECTION -->
+      <section id="resultsSection" class="p-10 lg:p-14 bg-black/40" style="display:none;">
+        <div class="flex items-center justify-between mb-12">
+          <div>
+            <h3 class="font-heading text-2xl font-bold tracking-tight">Hasil Komentar</h3>
+            <p class="text-white/20 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Tinjau dan salin komentar
+              yang dihasilkan AI.</p>
+          </div>
+          <div class="flex gap-3">
+            <button
+              class="px-5 py-2.5 rounded-2xl glass-card text-[11px] font-bold text-aqua hover:border-aqua flex items-center gap-2"
+              onclick="exportTxt()">
+              <i class="ti ti-file-description text-base"></i> Export TXT
+            </button>
+            <button
+              class="px-5 py-2.5 rounded-2xl glass-card text-[11px] font-bold text-aqua hover:border-aqua flex items-center gap-2"
+              onclick="exportCsv()">
+              <i class="ti ti-table-export text-base"></i> Export CSV
+            </button>
+          </div>
         </div>
-        <div class="progress-status" id="progressStatus">Menunggu...</div>
-      </div>
+
+        <!-- Result Container -->
+        <div id="resultsContainer" class="masonry-grid">
+          <!-- Dynamically injected -->
+        </div>
+      </section>
+
+      <!-- EMPTY STATE -->
+      <section id="emptyState" class="p-24 flex flex-col items-center justify-center text-center opacity-30">
+        <div class="w-20 h-20 rounded-3xl glass-card flex items-center justify-center mb-6">
+          <i class="ti ti-message-2-code text-5xl text-mauve"></i>
+        </div>
+        <p class="font-heading text-lg font-bold uppercase tracking-[0.2em] leading-relaxed">
+          Masukkan URL di atas lalu tekan<br>
+          <span class="text-aqua">"Generate Comments"</span> untuk memulai
+        </p>
+      </section>
+
     </div>
 
-    <!-- RESULTS -->
-    <div id="resultsSection" style="display:none;">
-      <div class="results-header">
-        <div class="results-title">📝 Hasil Komentar</div>
-        <div class="export-bar">
-          <button class="btn-export" onclick="exportTxt()">📄 Export TXT</button>
-          <button class="btn-export" onclick="exportCsv()">📊 Export CSV</button>
-        </div>
-      </div>
-      <div id="resultsContainer"></div>
-    </div>
+    <!-- FOOTER -->
+    <footer class="mt-16 text-center text-white/10 text-[10px] font-bold uppercase tracking-[0.5em]">
+      CommentBot v2.0 • Enhanced Ethereal UI
+    </footer>
 
-    <!-- EMPTY STATE (initial) -->
-    <div id="emptyState" class="empty-state">
-      <div class="icon">💬</div>
-      <p>Masukkan URL di atas lalu tekan<br><strong>"Generate Comments"</strong> untuk memulai</p>
-    </div>
-
-    <div class="footer">CommentBot v2.0 — Powered by Grok AI</div>
   </div>
 
   <!-- TOASTS -->
-  <div class="toasts" id="toasts"></div>
+  <div id="toasts" class="fixed bottom-10 right-10 z-[100] flex flex-col gap-4 max-w-sm w-full pointer-events-none">
+  </div>
 
+  <!-- SCRIPTS -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3/dist/gsap.min.js"></script>
   <script>
-    // ── State ──────────────────────────────────────────────────────
+    // ── Design Animations ──────────────────────────────────────────
+    gsap.to(".aurora-mesh", {
+      backgroundPosition: "100% 50%",
+      duration: 30,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut"
+    });
+
+    // ── Logic ──────────────────────────────────────────────────────
     let allResults = [];
     let isProcessing = false;
 
-    // ── URL Count ─────────────────────────────────────────────────
     const textarea = document.getElementById('urlTextarea');
     textarea.addEventListener('input', updateUrlCount);
 
     function updateUrlCount() {
       const lines = textarea.value.split('\n').filter(l => l.trim());
-      document.getElementById('urlCount').textContent = `${lines.length} URL`;
+      document.getElementById('urlCount').textContent = `${lines.length} URL Detected`;
     }
 
-    // ── Delay Config ─────────────────────────────────────────────
-    const DELAY_MIN_SEC = 30;
-    const DELAY_MAX_SEC = 60;
+    const DELAY_MIN_SEC = 5;
+    const DELAY_MAX_SEC = 7;
 
     function getRandomDelay() {
       return Math.floor(Math.random() * (DELAY_MAX_SEC - DELAY_MIN_SEC + 1)) + DELAY_MIN_SEC;
@@ -797,18 +377,12 @@
       return new Promise(resolve => {
         let remaining = seconds;
         const statusEl = document.getElementById('progressStatus');
-        const progressLabel = document.querySelector('.progress-label');
-
-        // Show countdown in the progress label
-        progressLabel.innerHTML = '⏳ Menunggu jeda...';
-
         const tick = () => {
           if (remaining <= 0) {
-            progressLabel.innerHTML = '<span class="spinner"></span> Memproses...';
             resolve();
             return;
           }
-          statusEl.textContent = `⏳ Jeda ${remaining} detik sebelum komentar berikutnya...`;
+          statusEl.textContent = `⏳ Cool Down: ${remaining}s`;
           remaining--;
           setTimeout(tick, 1000);
         };
@@ -816,7 +390,6 @@
       });
     }
 
-    // ── Generate ──────────────────────────────────────────────────
     async function startGenerate() {
       const raw = textarea.value.trim();
       if (!raw) {
@@ -838,26 +411,25 @@
       isProcessing = true;
       allResults = [];
 
-      // UI state
-      document.getElementById('btnGenerate').disabled = true;
-      document.getElementById('btnGenerate').innerHTML = '<span class="spinner"></span> Memproses...';
+      const btn = document.getElementById('btnGenerate');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Memproses...';
       document.getElementById('emptyState').style.display = 'none';
       document.getElementById('resultsSection').style.display = 'none';
+      document.getElementById('resultsContainer').innerHTML = '';
 
       const progressSection = document.getElementById('progressSection');
-      progressSection.classList.add('visible');
+      progressSection.style.display = 'block';
 
-      // Process one-by-one for progress feedback
       for (let i = 0; i < urls.length; i++) {
         const url = urls[i];
 
-        // Add delay between comments (not before the first one)
         if (i > 0) {
           const delaySec = getRandomDelay();
           await waitWithCountdown(delaySec);
         }
 
-        updateProgress(i, urls.length, `Memproses: ${url}`);
+        updateProgress(i, urls.length, `Target: ${new URL(url).hostname}`);
 
         try {
           const res = await fetch('/api/generate', {
@@ -897,18 +469,16 @@
         renderResults();
       }
 
-      // Done
       updateProgress(urls.length, urls.length, 'Selesai!');
       isProcessing = false;
-      document.getElementById('btnGenerate').disabled = false;
-      document.getElementById('btnGenerate').innerHTML = '✨ Generate Comments';
-      setTimeout(() => progressSection.classList.remove('visible'), 1500);
+      btn.disabled = false;
+      btn.innerHTML = '<i class=\"ti ti-sparkles\"></i> Generate Comments';
+      setTimeout(() => progressSection.style.display = 'none', 2000);
 
       const successCount = allResults.filter(r => r.status === 'success').length;
-      toast(`Selesai! ${successCount}/${allResults.length} komentar berhasil di-generate`, 'success');
+      toast(`Selesai! ${successCount}/${allResults.length} komentar berhasil dibuat`, 'success');
     }
 
-    // ── Progress ──────────────────────────────────────────────────
     function updateProgress(current, total, statusMsg) {
       const pct = total > 0 ? Math.round((current / total) * 100) : 0;
       document.getElementById('progressBar').style.width = pct + '%';
@@ -916,54 +486,70 @@
       document.getElementById('progressStatus').textContent = statusMsg;
     }
 
-    // ── Render Results ────────────────────────────────────────────
     function renderResults() {
       const container = document.getElementById('resultsContainer');
       document.getElementById('resultsSection').style.display = 'block';
 
-      container.innerHTML = allResults.map((r, i) => {
+      const currentCount = container.children.length;
+      const newHtml = allResults.slice(currentCount).map((r, i) => {
+        const idx = currentCount + i;
         if (r.status === 'success') {
           const displayUrl = r.commentUrl || r.url;
           return `
-            <div class="result-card success">
-              <div class="result-index">✅ Komentar #${i + 1}</div>
-              <a class="result-url" href="${escHtml(displayUrl)}" target="_blank">🔗 ${escHtml(displayUrl)}</a>
-              <div class="result-comment">
-                <p>${escHtml(r.comment)}</p>
+            <div class="result-card glass-card rounded-[32px] p-8 break-inside-avoid border-l-2 border-l-mauve glass-highlight opacity-0 translate-y-4">
+              <div class=\"flex items-start justify-between mb-6\">
+                <div class=\"flex items-center gap-4\">
+                  <div class=\"w-10 h-10 rounded-2xl bg-gradient-to-br from-mauve/20 to-aqua/20 flex items-center justify-center border border-white/10\">
+                    <img src=\"https://i.pravatar.cc/40?u=${r.commenter?.name || 'user'}\" class=\"w-full h-full rounded-2xl object-cover grayscale\" alt=\"Avatar\">
+                  </div>
+                  <div>
+                    <p class=\"text-[11px] font-bold text-white\">${escHtml(r.commenter?.name || '-')}</p>
+                    <p class=\"text-[9px] text-mauve font-bold uppercase tracking-wider\">Komentar Berhasil</p>
+                  </div>
+                </div>
+                <button class=\"w-9 h-9 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-xl text-white/40 transition-all\" onclick=\"copyComment(this, ${idx})\">
+                  <i class=\"ti ti-copy text-sm\"></i>
+                </button>
               </div>
-              <div class="result-meta">
-                <span>👤 ${escHtml(r.commenter?.name || '-')}</span>
-                <span>📧 ${escHtml(r.commenter?.email || '-')}</span>
-                <span>📅 ${escHtml(r.date || '-')}</span>
-                <button class="btn-copy" onclick="copyComment(this, ${i})">📋 Copy</button>
-              </div>
-            </div>`;
+              <a href=\"${escHtml(displayUrl)}\" target=\"_blank\" class=\"text-[10px] text-aqua hover:underline block mb-4 opacity-50 truncate font-mono tracking-tighter\">\ud83d\udd17 ${escHtml(displayUrl)}</a>
+              <p class=\"text-sm text-white/80 leading-relaxed font-medium italic\">\"${escHtml(r.comment)}\"</p>
+              <div class=\"mt-6 flex flex-wrap gap-4 pt-6 border-t border-white/5 opacity-30\">\n                <span class=\"text-[9px] font-bold uppercase\">📧 ${escHtml(r.commenter?.email || '-')}</span>\n                <span class=\"text-[9px] font-bold uppercase\">📅 ${escHtml(r.date || '-')}</span>\n              </div>\n            </div>`;
         } else {
           return `
-            <div class="result-card error">
-              <div class="result-index">❌ Gagal #${i + 1}</div>
-              <a class="result-url" href="${escHtml(r.url)}" target="_blank">${escHtml(r.url)}</a>
-              <div class="result-error">${escHtml(r.error || 'Unknown error')}</div>
-            </div>`;
+            <div class="result-card glass-card rounded-[32px] p-8 break-inside-avoid border-l-2 border-l-red-500/40 opacity-0 translate-y-4">
+              <div class=\"flex items-center gap-2 mb-4\">\n                <i class=\"ti ti-alert-circle text-red-500 text-base\"></i>\n                <span class=\"text-[9px] font-bold text-red-400 uppercase tracking-[0.2em]\">Gagal Generasi</span>\n              </div>\n              <p class=\"text-[10px] text-white/30 mb-4 font-mono truncate\">${escHtml(r.url)}</p>\n              <p class=\"text-sm text-red-300 font-medium bg-red-500/5 p-4 rounded-2xl border border-red-500/10\">${escHtml(r.error || 'Unknown error')}</p>\n            </div>`;
         }
       }).join('');
+
+      container.insertAdjacentHTML('beforeend', newHtml);
+
+      // GSAP Entrance Reveal
+      gsap.to(".result-card.opacity-0", {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        stagger: 0.1,
+        ease: "power3.out",
+        onComplete: function () {
+          document.querySelectorAll('.result-card.opacity-0').forEach(el => el.classList.remove('opacity-0', 'translate-y-4'));
+        }
+      });
     }
 
-    // ── Copy ──────────────────────────────────────────────────────
     function copyComment(btn, index) {
       const comment = allResults[index]?.comment;
       if (!comment) return;
       navigator.clipboard.writeText(comment).then(() => {
-        btn.classList.add('copied');
-        btn.innerHTML = '✅ Copied!';
+        const icon = btn.querySelector('i');
+        icon.className = 'ti ti-check';
+        btn.classList.add('text-aqua', 'bg-aqua/10');
         setTimeout(() => {
-          btn.classList.remove('copied');
-          btn.innerHTML = '📋 Copy';
+          icon.className = 'ti ti-copy';
+          btn.classList.remove('text-aqua', 'bg-aqua/10');
         }, 2000);
       });
     }
 
-    // ── Export TXT ────────────────────────────────────────────────
     function exportTxt() {
       if (allResults.length === 0) { toast('Belum ada hasil!', 'error'); return; }
       const lines = allResults.map((r, i) => {
@@ -977,7 +563,6 @@
       toast('File TXT berhasil diunduh!', 'success');
     }
 
-    // ── Export CSV ────────────────────────────────────────────────
     function exportCsv() {
       if (allResults.length === 0) { toast('Belum ada hasil!', 'error'); return; }
       const header = 'No,URL,Link Komentar,Status,Komentar,Nama,Email,Tanggal\n';
@@ -998,23 +583,28 @@
       URL.revokeObjectURL(a.href);
     }
 
-    // ── Clear ─────────────────────────────────────────────────────
     function clearAll() {
       textarea.value = '';
       updateUrlCount();
       allResults = [];
       document.getElementById('resultsSection').style.display = 'none';
-      document.getElementById('emptyState').style.display = 'block';
+      document.getElementById('emptyState').style.display = 'flex';
+      document.getElementById('resultsContainer').innerHTML = '';
     }
 
-    // ── Toast ─────────────────────────────────────────────────────
     function toast(msg, type = 'success') {
       const c = document.getElementById('toasts');
       const el = document.createElement('div');
-      el.className = `toast toast-${type}`;
-      el.innerHTML = `${type === 'success' ? '✅' : '❌'} ${msg}`;
+      el.className = `glass-card p-5 rounded-[24px] pointer-events-auto border-l-4 shadow-2xl flex items-center gap-4 ${type === 'success' ? 'border-l-aqua bg-aqua/5' : 'border-l-red-500 bg-red-500/5'}`;
+      el.innerHTML = `
+        <div class=\"w-2 h-2 rounded-full ${type === 'success' ? 'bg-aqua animate-pulse' : 'bg-red-500'}\"></div>\n        <div class=\"flex-1\">\n          <p class=\"text-[11px] font-bold text-white uppercase tracking-wider\">${type === 'success' ? 'Berhasil' : 'Kesalahan'}</p>\n          <p class=\"text-[10px] text-white/40 mt-0.5 font-medium\">${msg}</p>\n        </div>\n      `;
       c.appendChild(el);
-      setTimeout(() => el.remove(), 3500);
+
+      gsap.from(el, { x: 80, opacity: 0, duration: 0.5, ease: "back.out(1.7)" });
+
+      setTimeout(() => {
+        gsap.to(el, { x: 80, opacity: 0, duration: 0.5, ease: "power2.in", onComplete: () => el.remove() });
+      }, 4000);
     }
 
     function escHtml(s) {

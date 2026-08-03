@@ -10,3 +10,6 @@ urls.txt
 .vercel
 dev-server.js
 mcp_*.json
+
+.vercel
+.env*

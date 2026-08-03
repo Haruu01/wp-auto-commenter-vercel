@@ -7,8 +7,8 @@ const DEFAULT_EMAIL = 'berita@esaunggul.ac.id';
 const DEFAULT_WEBSITE = 'https://www.esaunggul.ac.id/';
 
 // ── Delay Config (in seconds) ───────────────────────────────────────────────
-const DELAY_MIN_SEC = 30; // Minimum delay between comments
-const DELAY_MAX_SEC = 60; // Maximum delay between comments
+const DELAY_MIN_SEC = 5; // Minimum delay between comments
+const DELAY_MAX_SEC = 7; // Maximum delay between comments
 
 function randomDelay() {
   const ms = (Math.floor(Math.random() * (DELAY_MAX_SEC - DELAY_MIN_SEC + 1)) + DELAY_MIN_SEC) * 1000;
@@ -214,7 +214,7 @@ async function generateComment(articleText, retryCount = 0) {
         messages: [
           {
             role: 'user',
-            content: `Baca artikel berikut dan buatkan 1 komentar yang sangat natural, relevan, apresiatif, dan menarik sesuai dengan bahasa artikelnya. Panjang komentar sekitar 2-4 kalimat. Jangan memberikan teks pengantar seperti "Berikut adalah komentar:" dll, cukup output isi komentarnya saja tanpa tanda kutip.\n\nArtikel:\n${articleText.substring(0, 5000)}`,
+            content: `Baca artikel berikut dan buatkan 1 komentar yang sangat natural, relevan, apresiatif, dan menarik. PENTING: Gunakan bahasa yang SAMA PERSIS dengan bahasa yang digunakan pada artikel tersebut (misal: jika artikel dalam bahasa Inggris, komentar WAJIB dalam bahasa Inggris; jika bahasa Indonesia, WAJIB bahasa Indonesia, dsb). Panjang komentar sekitar 2-4 kalimat. Jangan memberikan teks pengantar seperti "Berikut adalah komentar:" dll, cukup output isi komentarnya saja tanpa tanda kutip.\n\nArtikel:\n${articleText.substring(0, 5000)}`,
           },
         ],
       }),
