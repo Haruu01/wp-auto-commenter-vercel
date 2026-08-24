@@ -29,5 +29,5 @@ Open `http://localhost:3456`
 
 - **Frontend**: Vanilla HTML/CSS/JS
 - **Backend**: Vercel Serverless Functions (Node.js)
-- **AI**: Grok API (xAI) with fallback to Gemini API (Google)
+- **AI**: Gemini API (Google) with fallback to Grok API (xAI)
 - **HTML Parsing**: node-html-parser

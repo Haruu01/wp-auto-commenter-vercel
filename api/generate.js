@@ -202,7 +202,7 @@ async function submitComment({ actionUrl, commentPostId, commentParent, hiddenFi
 }
 
 // ── AI Comment Generation ───────────────────────────────────────────────────
-async function generateComment(articleText, retryCount = 0) {
+async function generateGrokComment(articleText, retryCount = 0) {
   try {
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',
@@ -224,7 +224,7 @@ async function generateComment(articleText, retryCount = 0) {
     if (response.status === 429) {
       if (retryCount < 2) {
         await new Promise(resolve => setTimeout(resolve, 15000));
-        return generateComment(articleText, retryCount + 1);
+        return generateGrokComment(articleText, retryCount + 1);
       }
       throw new Error('Rate limit exceeded after retries');
     }
@@ -237,23 +237,16 @@ async function generateComment(articleText, retryCount = 0) {
     const data = await response.json();
     return data.choices[0].message.content.trim();
   } catch (error) {
-    console.error(`Error generating comment (attempt ${retryCount + 1}):`, error.message);
+    console.error(`Error generating Grok comment (attempt ${retryCount + 1}):`, error.message);
     if (error.message.includes('Rate limit') && retryCount < 2) {
       await new Promise(resolve => setTimeout(resolve, 15000));
-      return generateComment(articleText, retryCount + 1);
+      return generateGrokComment(articleText, retryCount + 1);
     }
-    
-    console.log('Grok failed, falling back to Gemini...');
-    try {
-      return await generateGeminiComment(articleText);
-    } catch (geminiError) {
-      console.error('Gemini fallback failed:', geminiError.message);
-      return 'Artikel ini sangat edukatif dan memotivasi, terima kasih atas insightnya yang mendalam!';
-    }
+    throw error;
   }
 }
 
-async function generateGeminiComment(articleText, retryCount = 0) {
+async function generateComment(articleText, retryCount = 0) {
   try {
     const prompt = `Baca artikel berikut dan buatkan 1 komentar yang sangat natural, relevan, apresiatif, dan menarik. PENTING: Gunakan bahasa yang SAMA PERSIS dengan bahasa yang digunakan pada artikel tersebut (misal: jika artikel dalam bahasa Inggris, komentar WAJIB dalam bahasa Inggris; jika bahasa Indonesia, WAJIB bahasa Indonesia, dsb). Panjang komentar sekitar 2-4 kalimat. Jangan memberikan teks pengantar seperti "Berikut adalah komentar:" dll, cukup output isi komentarnya saja tanpa tanda kutip.\n\nArtikel:\n${articleText.substring(0, 5000)}`;
     
@@ -277,7 +270,7 @@ async function generateGeminiComment(articleText, retryCount = 0) {
     if (response.status === 429) {
       if (retryCount < 2) {
         await new Promise(resolve => setTimeout(resolve, 15000));
-        return generateGeminiComment(articleText, retryCount + 1);
+        return generateComment(articleText, retryCount + 1);
       }
       throw new Error('Gemini Rate limit exceeded after retries');
     }
@@ -295,9 +288,16 @@ async function generateGeminiComment(articleText, retryCount = 0) {
   } catch (error) {
     if (error.message.includes('Rate limit') && retryCount < 2) {
       await new Promise(resolve => setTimeout(resolve, 15000));
-      return generateGeminiComment(articleText, retryCount + 1);
+      return generateComment(articleText, retryCount + 1);
     }
-    throw error;
+    
+    console.log('Gemini failed, falling back to Grok...');
+    try {
+      return await generateGrokComment(articleText);
+    } catch (grokError) {
+      console.error('Grok fallback failed:', grokError.message);
+      return 'Artikel ini sangat edukatif dan memotivasi, terima kasih atas insightnya yang mendalam!';
+    }
   }
 }
 
