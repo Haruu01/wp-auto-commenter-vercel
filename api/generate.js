@@ -2,13 +2,14 @@ import { parse } from 'node-html-parser';
 
 // ── Hardcoded Config ────────────────────────────────────────────────────────
 const GROK_API_KEY = process.env.GROK_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const DEFAULT_NAME = 'Joenathan';
 const DEFAULT_EMAIL = 'berita@esaunggul.ac.id';
 const DEFAULT_WEBSITE = 'https://www.esaunggul.ac.id/';
 
 // ── Delay Config (in seconds) ───────────────────────────────────────────────
-const DELAY_MIN_SEC = 5; // Minimum delay between comments
-const DELAY_MAX_SEC = 7; // Maximum delay between comments
+const DELAY_MIN_SEC = 8; // Minimum delay between comments
+const DELAY_MAX_SEC = 11; // Maximum delay between comments
 
 function randomDelay() {
   const ms = (Math.floor(Math.random() * (DELAY_MAX_SEC - DELAY_MIN_SEC + 1)) + DELAY_MIN_SEC) * 1000;
@@ -241,7 +242,62 @@ async function generateComment(articleText, retryCount = 0) {
       await new Promise(resolve => setTimeout(resolve, 15000));
       return generateComment(articleText, retryCount + 1);
     }
-    return 'Artikel ini sangat edukatif dan memotivasi, terima kasih atas insightnya yang mendalam!';
+    
+    console.log('Grok failed, falling back to Gemini...');
+    try {
+      return await generateGeminiComment(articleText);
+    } catch (geminiError) {
+      console.error('Gemini fallback failed:', geminiError.message);
+      return 'Artikel ini sangat edukatif dan memotivasi, terima kasih atas insightnya yang mendalam!';
+    }
+  }
+}
+
+async function generateGeminiComment(articleText, retryCount = 0) {
+  try {
+    const prompt = `Baca artikel berikut dan buatkan 1 komentar yang sangat natural, relevan, apresiatif, dan menarik. PENTING: Gunakan bahasa yang SAMA PERSIS dengan bahasa yang digunakan pada artikel tersebut (misal: jika artikel dalam bahasa Inggris, komentar WAJIB dalam bahasa Inggris; jika bahasa Indonesia, WAJIB bahasa Indonesia, dsb). Panjang komentar sekitar 2-4 kalimat. Jangan memberikan teks pengantar seperti "Berikut adalah komentar:" dll, cukup output isi komentarnya saja tanpa tanda kutip.\n\nArtikel:\n${articleText.substring(0, 5000)}`;
+    
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [{
+            text: prompt
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+        }
+      }),
+    });
+
+    if (response.status === 429) {
+      if (retryCount < 2) {
+        await new Promise(resolve => setTimeout(resolve, 15000));
+        return generateGeminiComment(articleText, retryCount + 1);
+      }
+      throw new Error('Gemini Rate limit exceeded after retries');
+    }
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} — ${errText}`);
+    }
+
+    const data = await response.json();
+    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+      return data.candidates[0].content.parts[0].text.trim();
+    }
+    throw new Error('Unexpected Gemini API response format');
+  } catch (error) {
+    if (error.message.includes('Rate limit') && retryCount < 2) {
+      await new Promise(resolve => setTimeout(resolve, 15000));
+      return generateGeminiComment(articleText, retryCount + 1);
+    }
+    throw error;
   }
 }
 
@@ -270,8 +326,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Please provide an array of URLs' });
   }
 
-  if (urls.length > 20) {
-    return res.status(400).json({ error: 'Maximum 20 URLs per request' });
+  if (urls.length > 30) {
+    return res.status(400).json({ error: 'Maximum 30 URLs per request' });
   }
 
   const results = [];
