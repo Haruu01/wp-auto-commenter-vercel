@@ -3,13 +3,16 @@ import { parse } from 'node-html-parser';
 // ── Hardcoded Config ────────────────────────────────────────────────────────
 const GROK_API_KEY = process.env.GROK_API_KEY;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
+const MUSE_SPARK_API_KEY = process.env.MUSE_SPARK_API_KEY;
+const MUSE_SPARK_MODEL = process.env.MUSE_SPARK_MODEL || 'muse-spark-1.2';
 const DEFAULT_NAME = 'Joenathan';
 const DEFAULT_EMAIL = 'berita@esaunggul.ac.id';
 const DEFAULT_WEBSITE = 'https://www.esaunggul.ac.id/';
 
 // ── Delay Config (in seconds) ───────────────────────────────────────────────
-const DELAY_MIN_SEC = 8; // Minimum delay between comments
-const DELAY_MAX_SEC = 11; // Maximum delay between comments
+const DELAY_MIN_SEC = 10; // Minimum delay between comments
+const DELAY_MAX_SEC = 15; // Maximum delay between comments
 
 function randomDelay() {
   const ms = (Math.floor(Math.random() * (DELAY_MAX_SEC - DELAY_MIN_SEC + 1)) + DELAY_MIN_SEC) * 1000;
@@ -246,59 +249,152 @@ async function generateGrokComment(articleText, retryCount = 0) {
   }
 }
 
-async function generateComment(articleText, retryCount = 0) {
+async function generateGeminiComment(articleText, retryCount = 0) {
+  if (!GEMINI_API_KEY || GEMINI_API_KEY === 'your_gemini_api_key_here') {
+    throw new Error('GEMINI_API_KEY belum dikonfigurasi di environment variables');
+  }
+
+  const prompt = `Baca artikel berikut dan buatkan 1 komentar yang sangat natural, relevan, apresiatif, dan menarik. PENTING: Gunakan bahasa yang SAMA PERSIS dengan bahasa yang digunakan pada artikel tersebut (misal: jika artikel dalam bahasa Inggris, komentar WAJIB dalam bahasa Inggris; jika bahasa Indonesia, WAJIB bahasa Indonesia, dsb). Panjang komentar sekitar 2-4 kalimat. Jangan memberikan teks pengantar seperti "Berikut adalah komentar:" dll, cukup output isi komentarnya saja tanpa tanda kutip.\n\nArtikel:\n${articleText.substring(0, 5000)}`;
+
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7 },
+    }),
+    signal: AbortSignal.timeout(30000),
+  });
+
+  if (response.status === 429) {
+    if (retryCount < 2) {
+      await new Promise(resolve => setTimeout(resolve, 15000));
+      return generateGeminiComment(articleText, retryCount + 1);
+    }
+    throw new Error('Gemini: Rate limit tercapai, coba lagi nanti');
+  }
+
+  if (!response.ok) {
+    const errText = await response.text();
+    let detail = errText;
+    try { detail = JSON.parse(errText)?.error?.message || errText; } catch { }
+    throw new Error(`Gemini API error ${response.status}: ${detail}`);
+  }
+
+  const data = await response.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('Gemini: Response tidak valid atau konten diblokir');
+  return text.trim();
+}
+
+// ── Claude Comment Generation ───────────────────────────────────────────────
+async function generateClaudeComment(articleText, retryCount = 0) {
+  if (!ANTHROPIC_API_KEY || ANTHROPIC_API_KEY === 'your_anthropic_api_key_here') {
+    throw new Error('ANTHROPIC_API_KEY belum dikonfigurasi di environment variables');
+  }
+
+  const prompt = `Baca artikel berikut dan buatkan 1 komentar yang sangat natural, relevan, apresiatif, dan menarik. PENTING: Gunakan bahasa yang SAMA PERSIS dengan bahasa yang digunakan pada artikel tersebut (misal: jika artikel dalam bahasa Inggris, komentar WAJIB dalam bahasa Inggris; jika bahasa Indonesia, WAJIB bahasa Indonesia, dsb). Panjang komentar sekitar 2-4 kalimat. Jangan memberikan teks pengantar seperti "Berikut adalah komentar:" dll, cukup output isi komentarnya saja tanpa tanda kutip.\n\nArtikel:\n${articleText.substring(0, 5000)}`;
+
+  let res;
   try {
-    const prompt = `Baca artikel berikut dan buatkan 1 komentar yang sangat natural, relevan, apresiatif, dan menarik. PENTING: Gunakan bahasa yang SAMA PERSIS dengan bahasa yang digunakan pada artikel tersebut (misal: jika artikel dalam bahasa Inggris, komentar WAJIB dalam bahasa Inggris; jika bahasa Indonesia, WAJIB bahasa Indonesia, dsb). Panjang komentar sekitar 2-4 kalimat. Jangan memberikan teks pengantar seperti "Berikut adalah komentar:" dll, cukup output isi komentarnya saja tanpa tanda kutip.\n\nArtikel:\n${articleText.substring(0, 5000)}`;
-    
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    res = await fetch('https://api.justwoker.icu/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${ANTHROPIC_API_KEY}`
       },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: 0.7,
-        }
+        model: 'claude-opus-4-8',
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
       }),
+      signal: AbortSignal.timeout(300000),
     });
-
-    if (response.status === 429) {
-      if (retryCount < 2) {
-        await new Promise(resolve => setTimeout(resolve, 15000));
-        return generateComment(articleText, retryCount + 1);
-      }
-      throw new Error('Gemini Rate limit exceeded after retries');
-    }
-
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Gemini API error: ${response.status} — ${errText}`);
-    }
-
-    const data = await response.json();
-    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
-      return data.candidates[0].content.parts[0].text.trim();
-    }
-    throw new Error('Unexpected Gemini API response format');
-  } catch (error) {
-    if (error.message.includes('Rate limit') && retryCount < 2) {
-      await new Promise(resolve => setTimeout(resolve, 15000));
-      return generateComment(articleText, retryCount + 1);
-    }
-    
-    console.log('Gemini failed, falling back to Grok...');
-    try {
-      return await generateGrokComment(articleText);
-    } catch (grokError) {
-      console.error('Grok fallback failed:', grokError.message);
-      return 'Artikel ini sangat edukatif dan memotivasi, terima kasih atas insightnya yang mendalam!';
-    }
+  } catch (fetchErr) {
+    const msg = fetchErr.name === 'TimeoutError'
+      ? 'Timeout saat memanggil Claude API'
+      : `Gagal koneksi ke Claude API: ${fetchErr.cause?.message || fetchErr.message}`;
+    throw new Error(msg);
   }
+
+  if (res.status === 429) {
+    if (retryCount < 2) {
+      await new Promise(resolve => setTimeout(resolve, 15000));
+      return generateClaudeComment(articleText, retryCount + 1);
+    }
+    throw new Error('Claude: Rate limit tercapai, coba lagi nanti');
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let detail = errText;
+    try { detail = JSON.parse(errText)?.error?.message || errText; } catch { }
+    throw new Error(`Claude API error ${res.status}: ${detail}`);
+  }
+
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text) throw new Error('Claude: Response tidak valid atau konten diblokir');
+  return text.trim();
+}
+
+// ── Muse Spark Comment Generation ─────────────────────────────────────────
+async function generateMuseSparkComment(articleText, retryCount = 0) {
+  if (!MUSE_SPARK_API_KEY || MUSE_SPARK_API_KEY === 'your_muse_spark_api_key_here') {
+    throw new Error('MUSE_SPARK_API_KEY belum dikonfigurasi di environment variables');
+  }
+
+  const prompt = `Baca artikel berikut dan buatkan 1 komentar yang sangat natural, relevan, apresiatif, dan menarik. PENTING: Gunakan bahasa yang SAMA PERSIS dengan bahasa yang digunakan pada artikel tersebut (misal: jika artikel dalam bahasa Inggris, komentar WAJIB dalam bahasa Inggris; jika bahasa Indonesia, WAJIB bahasa Indonesia, dsb). Panjang komentar sekitar 2-4 kalimat. Jangan memberikan teks pengantar seperti "Berikut adalah komentar:" dll, cukup output isi komentarnya saja tanpa tanda kutip.\n\nArtikel:\n${articleText.substring(0, 5000)}`;
+
+  let res;
+  try {
+    res = await fetch('https://api.meta.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${MUSE_SPARK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: MUSE_SPARK_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+  } catch (fetchErr) {
+    const msg = fetchErr.name === 'TimeoutError'
+      ? 'Timeout saat memanggil Muse Spark API'
+      : `Gagal koneksi ke Muse Spark API: ${fetchErr.cause?.message || fetchErr.message}`;
+    throw new Error(msg);
+  }
+
+  if (res.status === 429) {
+    if (retryCount < 2) {
+      await new Promise(resolve => setTimeout(resolve, 15000));
+      return generateMuseSparkComment(articleText, retryCount + 1);
+    }
+    throw new Error('Muse Spark: Rate limit tercapai, coba lagi nanti');
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let detail = errText;
+    try { detail = JSON.parse(errText)?.error?.message || errText; } catch { }
+    throw new Error(`Muse Spark API error ${res.status}: ${detail}`);
+  }
+
+  const data = await res.json();
+  const text = data?.choices?.[0]?.message?.content;
+  if (!text) throw new Error('Muse Spark: Response tidak valid atau konten diblokir');
+  return text.trim();
+}
+
+// Keep old name as alias for backward compatibility
+async function generateComment(articleText, retryCount = 0) {
+  return generateGeminiComment(articleText, retryCount);
 }
 
 // ── Vercel Serverless Handler ───────────────────────────────────────────────
@@ -316,7 +412,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { urls, name, email, website } = req.body;
+  const { urls, name, email, website, aiProvider } = req.body;
+  const useGrok = aiProvider === 'grok';
+  const useClaude = aiProvider === 'claude';
+  const useMuseSpark = aiProvider === 'muse-spark';
+  const useGemini = aiProvider === 'gemini' || !aiProvider;
 
   const commenterName = (name || '').trim() || DEFAULT_NAME;
   const commenterEmail = (email || '').trim() || DEFAULT_EMAIL;
@@ -326,8 +426,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Please provide an array of URLs' });
   }
 
-  if (urls.length > 30) {
-    return res.status(400).json({ error: 'Maximum 30 URLs per request' });
+  if (urls.length > 40) {
+    return res.status(400).json({ error: 'Maximum 40 URLs per request' });
   }
 
   const results = [];
@@ -376,7 +476,13 @@ export default async function handler(req, res) {
       }
 
       // 4. Generate AI comment
-      const comment = await generateComment(articleText);
+      const comment = useGrok
+        ? await generateGrokComment(articleText)
+        : useClaude
+          ? await generateClaudeComment(articleText)
+          : useMuseSpark
+            ? await generateMuseSparkComment(articleText)
+            : await generateComment(articleText);
 
       // 5. Submit comment to WordPress
       const submitResult = await submitComment({

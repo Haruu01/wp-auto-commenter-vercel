@@ -162,6 +162,107 @@
     ::-webkit-scrollbar-thumb:hover {
       background: rgba(255, 255, 255, 0.2)
     }
+    /* ── AI Provider Toggle ───────────────────────────────────────── */
+    .ai-toggle {
+      position: relative;
+      display: inline-flex;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      padding: 5px;
+      gap: 4px;
+    }
+
+    .ai-toggle input[type="radio"] {
+      display: none;
+    }
+
+    .ai-toggle label {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      color: rgba(255,255,255,0.35);
+      transition: color 0.3s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .ai-toggle input[type="radio"]:checked + label {
+      color: #0B0B1A;
+    }
+
+    .ai-toggle-slider {
+      position: absolute;
+      top: 5px;
+      height: calc(100% - 10px);
+      border-radius: 999px;
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 0;
+    }
+
+    #ai-gemini:checked ~ .ai-toggle-slider {
+      background: linear-gradient(135deg, #4285F4, #34A853);
+      box-shadow: 0 0 20px rgba(66,133,244,0.4);
+    }
+
+    #ai-grok:checked ~ .ai-toggle-slider {
+      background: linear-gradient(135deg, #DF73FF, #00CCFF);
+      box-shadow: 0 0 20px rgba(223,115,255,0.4);
+    }
+
+    #ai-claude:checked ~ .ai-toggle-slider {
+      background: linear-gradient(135deg, #f97316, #fb923c);
+      box-shadow: 0 0 20px rgba(249,115,22,0.4);
+    }
+
+    #ai-muse-spark:checked ~ .ai-toggle-slider {
+      background: linear-gradient(135deg, #7928CA, #FF0080);
+      box-shadow: 0 0 20px rgba(121,40,202,0.4);
+    }
+
+    .ai-provider-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .badge-gemini {
+      background: rgba(66,133,244,0.15);
+      border: 1px solid rgba(66,133,244,0.3);
+      color: #6ba3ff;
+    }
+
+    .badge-grok {
+      background: rgba(223,115,255,0.15);
+      border: 1px solid rgba(223,115,255,0.3);
+      color: #DF73FF;
+    }
+
+    .badge-claude {
+      background: rgba(249,115,22,0.15);
+      border: 1px solid rgba(249,115,22,0.4);
+      color: #f97316;
+    }
+
+    .badge-muse-spark {
+      background: rgba(121,40,202,0.15);
+      border: 1px solid rgba(121,40,202,0.3);
+      color: #c084fc;
+    }
   </style>
 </head>
 
@@ -278,6 +379,40 @@
                 placeholder="Masukkan URL satu per baris...&#10;https://example.com/artikel-1&#10;https://example.com/artikel-2"></textarea>
             </div>
 
+            <!-- AI Provider Selector -->
+            <div class="space-y-4 pt-2">
+              <div class="flex justify-between items-center px-1">
+                <label class="text-[10px] font-bold text-white/40 uppercase tracking-widest">AI Provider</label>
+                <span id="aiProviderLabel" class="text-[10px] font-bold text-mauve">Gemini aktif</span>
+              </div>
+              <div class="flex items-center">
+                <div class="ai-toggle" id="aiToggleWrap">
+                  <input type="radio" id="ai-gemini" name="aiProvider" value="gemini" checked>
+                  <label for="ai-gemini">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z" fill="currentColor" opacity=".3"/><path d="M12 2v20M2 12h20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                    Gemini
+                  </label>
+                  <input type="radio" id="ai-grok" name="aiProvider" value="grok">
+                  <label for="ai-grok">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Grok
+                  </label>
+                  <input type="radio" id="ai-claude" name="aiProvider" value="claude">
+                  <label for="ai-claude">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" fill="currentColor" opacity=".25"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Claude
+                  </label>
+                  <input type="radio" id="ai-muse-spark" name="aiProvider" value="muse-spark">
+                  <label for="ai-muse-spark">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="currentColor" opacity=".8"/></svg>
+                    Muse Spark
+                  </label>
+                  <div class="ai-toggle-slider" id="aiToggleSlider"></div>
+                </div>
+              </div>
+              <p id="aiProviderDesc" class="text-[10px] text-white/25 font-medium ml-1">Menggunakan Google Gemini 1.5 Flash untuk menghasilkan komentar yang natural.</p>
+            </div>
+
             <!-- Actions -->
             <div class="flex items-center justify-end pt-6">
               <button id="btnGenerate"
@@ -357,6 +492,81 @@
     // ── Logic ──────────────────────────────────────────────────────
     let allResults = [];
     let isProcessing = false;
+    let selectedAiProvider = 'gemini';
+
+    // ── AI Provider Toggle ──────────────────────────────────────────
+    const aiGeminiRadio = document.getElementById('ai-gemini');
+    const aiGrokRadio = document.getElementById('ai-grok');
+    const aiSlider = document.getElementById('aiToggleSlider');
+    const aiLabel = document.getElementById('aiProviderLabel');
+    const aiDesc = document.getElementById('aiProviderDesc');
+
+    const AI_META = {
+      gemini: {
+        label: 'Gemini aktif',
+        desc: 'Menggunakan Google Gemini Flash untuk menghasilkan komentar yang natural.',
+      },
+      grok: {
+        label: 'Grok aktif',
+        desc: 'Menggunakan xAI Grok-3 Mini untuk menghasilkan komentar yang cerdas dan unik.',
+      },
+      claude: {
+        label: 'Claude aktif',
+        desc: 'Menggunakan Anthropic Claude Opus 4 untuk menghasilkan komentar berkualitas tinggi.',
+      },
+      'muse-spark': {
+        label: 'Muse Spark aktif',
+        desc: 'Menggunakan Meta Muse Spark 1.2 via api.meta.ai untuk komentar natural.',
+      },
+    };
+
+    function syncToggleSlider() {
+      const geminiLabel = document.querySelector('label[for="ai-gemini"]');
+      const grokLabel = document.querySelector('label[for="ai-grok"]');
+      const claudeLabel = document.querySelector('label[for="ai-claude"]');
+      const museSparkLabel = document.querySelector('label[for="ai-muse-spark"]');
+      const labelMap = { gemini: geminiLabel, grok: grokLabel, claude: claudeLabel, 'muse-spark': museSparkLabel };
+      const activeLabel = labelMap[selectedAiProvider] || geminiLabel;
+      const wrap = document.getElementById('aiToggleWrap');
+      const wrapRect = wrap.getBoundingClientRect();
+      const labelRect = activeLabel.getBoundingClientRect();
+      aiSlider.style.left = (labelRect.left - wrapRect.left + 5) + 'px';
+      aiSlider.style.width = (labelRect.width - 10) + 'px';
+      const meta = AI_META[selectedAiProvider];
+      aiLabel.textContent = meta.label;
+      aiDesc.textContent = meta.desc;
+      if (selectedAiProvider === 'gemini') {
+        aiLabel.style.color = '#6ba3ff';
+      } else if (selectedAiProvider === 'grok') {
+        aiLabel.style.color = '#DF73FF';
+      } else if (selectedAiProvider === 'muse-spark') {
+        aiLabel.style.color = '#c084fc';
+      } else {
+        aiLabel.style.color = '#f97316';
+      }
+    }
+
+    aiGeminiRadio.addEventListener('change', () => {
+      selectedAiProvider = 'gemini';
+      syncToggleSlider();
+    });
+    aiGrokRadio.addEventListener('change', () => {
+      selectedAiProvider = 'grok';
+      syncToggleSlider();
+    });
+    const aiClaudeRadio = document.getElementById('ai-claude');
+    aiClaudeRadio.addEventListener('change', () => {
+      selectedAiProvider = 'claude';
+      syncToggleSlider();
+    });
+    const aiMuseSparkRadio = document.getElementById('ai-muse-spark');
+    aiMuseSparkRadio.addEventListener('change', () => {
+      selectedAiProvider = 'muse-spark';
+      syncToggleSlider();
+    });
+
+    // Init slider position after DOM rendered
+    requestAnimationFrame(() => syncToggleSlider());
 
     const textarea = document.getElementById('urlTextarea');
     textarea.addEventListener('input', updateUrlCount);
@@ -403,8 +613,8 @@
         return;
       }
 
-      if (urls.length > 20) {
-        toast('Maksimal 20 URL per request!', 'error');
+      if (urls.length > 40) {
+        toast('Maksimal 40 URL per request!', 'error');
         return;
       }
 
@@ -440,13 +650,14 @@
               name: document.getElementById('inputName').value,
               email: document.getElementById('inputEmail').value,
               website: document.getElementById('inputWebsite').value,
+              aiProvider: selectedAiProvider,
             }),
           });
 
           const data = await res.json();
 
           if (data.results && data.results.length > 0) {
-            allResults.push(data.results[0]);
+            allResults.push({ ...data.results[0], aiProvider: selectedAiProvider });
           } else {
             allResults.push({
               url,
@@ -507,9 +718,12 @@
                     <p class=\"text-[9px] text-mauve font-bold uppercase tracking-wider\">Komentar Berhasil</p>
                   </div>
                 </div>
-                <button class=\"w-9 h-9 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-xl text-white/40 transition-all\" onclick=\"copyComment(this, ${idx})\">
-                  <i class=\"ti ti-copy text-sm\"></i>
-                </button>
+                <div class="flex items-center gap-2">
+                  <span class=\"ai-provider-badge ${r.aiProvider === 'grok' ? 'badge-grok' : r.aiProvider === 'claude' ? 'badge-claude' : r.aiProvider === 'muse-spark' ? 'badge-muse-spark' : 'badge-gemini'}\">${r.aiProvider === 'grok' ? '⚡ Grok' : r.aiProvider === 'claude' ? '🧠 Claude' : r.aiProvider === 'muse-spark' ? '✦ Muse Spark' : '✦ Gemini'}</span>
+                  <button class=\"w-9 h-9 flex items-center justify-center bg-white/5 hover:bg-white/10 rounded-xl text-white/40 transition-all\" onclick=\"copyComment(this, ${idx})\">
+                    <i class=\"ti ti-copy text-sm\"></i>
+                  </button>
+                </div>
               </div>
               <a href=\"${escHtml(displayUrl)}\" target=\"_blank\" class=\"text-[10px] text-aqua hover:underline block mb-4 opacity-50 truncate font-mono tracking-tighter\">\ud83d\udd17 ${escHtml(displayUrl)}</a>
               <p class=\"text-sm text-white/80 leading-relaxed font-medium italic\">\"${escHtml(r.comment)}\"</p>
